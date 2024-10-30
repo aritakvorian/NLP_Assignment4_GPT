@@ -94,13 +94,19 @@ class WordRecallThresholdFactChecker(object):
 
     def preprocessing(self, text):
         doc = self.nlp(text.lower())
-        tokens = [
-            token.lemma_ for token in doc
-            if token.is_alpha and token.lemma_ not in self.stop_words
-        ]
+        tokens = []
+
+        for token in doc:
+            if token.lemma_ in self.stop_words:
+                continue
+            if token.is_alpha is False:
+                continue
+
+            tokens.append(token.lemma_)
 
         # Generate bigrams and add them to the list of tokens
-        tokens_with_bigrams = tokens + ["_".join(bigram) for bigram in nltk.bigrams(tokens)]
+        #tokens_with_bigrams = tokens + ["_".join(bigram) for bigram in nltk.bigrams(tokens)]
+        tokens_with_bigrams = tokens
 
         return set(tokens_with_bigrams)
 

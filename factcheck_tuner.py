@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 from factcheck import *
 import numpy as np
+import matplotlib.pyplot as plt
 
 def _parse_args():
     parser = argparse.ArgumentParser()
@@ -131,13 +132,17 @@ if __name__=="__main__":
 
     max_accuracy = 0
     best_threshold = 0
+    accuracies = []
 
     for threshold in thresholds:
         fact_checker = WordRecallThresholdFactChecker(classification_threshold=threshold, nlp=nlp)
         accuracy = predict_two_classes(examples, fact_checker)
+        accuracies.append(accuracy)
 
         if accuracy > max_accuracy:
             max_accuracy = accuracy
             best_threshold = threshold
 
     print(f'Best Accuracy: {max_accuracy} | Best Threshold: {best_threshold}')
+    plt.plot(thresholds, accuracies)
+    plt.show()
