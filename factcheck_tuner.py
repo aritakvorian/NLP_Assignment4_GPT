@@ -135,6 +135,7 @@ if __name__=="__main__":
     accuracies = []
 
     for threshold in thresholds:
+        print(f'Threshold: {threshold}')
         fact_checker = WordRecallThresholdFactChecker(classification_threshold=threshold, nlp=nlp)
         accuracy = predict_two_classes(examples, fact_checker)
         accuracies.append(accuracy)
