@@ -6,6 +6,7 @@ import numpy as np
 import spacy
 import nltk
 import gc
+from rouge_score import rouge_scorer
 
 
 class FactExample:
@@ -80,16 +81,28 @@ class AlwaysEntailedFactChecker(object):
 
 
 class WordRecallThresholdFactChecker(object):
-    def __init__(self, classification_threshold = 0.025):
+    def __init__(self, classification_threshold=0.021, nlp=None):
         self.classification_threshold = classification_threshold
         nltk.download('stopwords')
         nltk.download('punkt_tab')
         self.stop_words = set(nltk.corpus.stopwords.words('english'))
 
+        if nlp is None:
+            self.nlp = spacy.load("en_core_web_sm")
+        else:
+            self.nlp = nlp
+
     def preprocessing(self, text):
-        tokens = nltk.tokenize.word_tokenize(text.lower())
-        tokens = [word for word in tokens if word.isalpha() and word not in self.stop_words]
-        return tokens
+        doc = self.nlp(text.lower())
+        tokens = [
+            token.lemma_ for token in doc
+            if token.is_alpha and token.lemma_ not in self.stop_words
+        ]
+
+        # Generate bigrams and add them to the list of tokens
+        tokens_with_bigrams = tokens + ["_".join(bigram) for bigram in nltk.bigrams(tokens)]
+
+        return set(tokens_with_bigrams)
 
     def jaccard_similarity(self, a, b):
         overlap = a.intersection(b)

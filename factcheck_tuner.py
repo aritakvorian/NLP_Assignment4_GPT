@@ -6,11 +6,10 @@ from typing import List, Dict
 from tqdm import tqdm
 import argparse
 from factcheck import *
-
+import numpy as np
 
 def _parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, required=True, help="choose from [random', 'always_entail', 'word_overlap', 'parsing', 'entailment]")
     # parser.add_argument('--labels_path', type=str, default="data/labeled_ChatGPT.jsonl", help="path to the labels")
     parser.add_argument('--labels_path', type=str, default="data/dev_labeled_ChatGPT.jsonl", help="path to the labels")
     parser.add_argument('--passages_path', type=str, default="data/passages_bm25_ChatGPT_humfacts.jsonl", help="path to the passages retrieved for the ChatGPT human-labeled facts")
@@ -85,8 +84,10 @@ def predict_two_classes(examples: List[FactExample], fact_checker):
 
         confusion_mat[gold_label][pred_label] += 1
         ex_count += 1
-    print_eval_stats(confusion_mat, gold_label_indexer)
 
+    accuracy = print_eval_stats(confusion_mat, gold_label_indexer)
+
+    return accuracy
 
 def print_eval_stats(confusion_mat, gold_label_indexer):
     """
@@ -94,11 +95,11 @@ def print_eval_stats(confusion_mat, gold_label_indexer):
     :param confusion_mat: The confusion matrix, indexed as [gold_label, pred_label]
     :param gold_label_indexer: The Indexer for the labels as a List, not an Indexer
     """
-    for row in confusion_mat:
-        print("\t".join([repr(item) for item in row]))
+    #for row in confusion_mat:
+        #print("\t".join([repr(item) for item in row]))
     correct_preds = sum([confusion_mat[i][i] for i in range(0, len(gold_label_indexer))])
     total_preds = sum([confusion_mat[i][j] for i in range(0, len(gold_label_indexer)) for j in range(0, len(gold_label_indexer))])
-    print("Accuracy: " + repr(correct_preds) + "/" + repr(total_preds) + " = " + repr(correct_preds/total_preds))
+    #print("Accuracy: " + repr(correct_preds) + "/" + repr(total_preds) + " = " + repr(correct_preds/total_preds))
     for idx in range(0, len(gold_label_indexer)):
         num_correct = confusion_mat[idx][idx]
         num_gold = sum([confusion_mat[idx][i] for i in range(0, len(gold_label_indexer))])
@@ -110,9 +111,11 @@ def print_eval_stats(confusion_mat, gold_label_indexer):
         else:
             prec = "undefined"
             f1 = "undefined"
-        print("Prec for " + gold_label_indexer[idx] + ": " + repr(num_correct) + "/" + repr(num_pred) + " = " + repr(prec))
-        print("Rec for " + gold_label_indexer[idx] + ": " + repr(num_correct) + "/" + repr(num_gold) + " = " + repr(rec))
-        print("F1 for " + gold_label_indexer[idx] + ": " + repr(f1))
+        #print("Prec for " + gold_label_indexer[idx] + ": " + repr(num_correct) + "/" + repr(num_pred) + " = " + repr(prec))
+        #print("Rec for " + gold_label_indexer[idx] + ": " + repr(num_correct) + "/" + repr(num_gold) + " = " + repr(rec))
+        #print("F1 for " + gold_label_indexer[idx] + ": " + repr(f1))
+
+    return correct_preds/total_preds
 
 
 if __name__=="__main__":
@@ -120,33 +123,21 @@ if __name__=="__main__":
     print(args)
 
     fact_to_passage_dict = read_passages(args.passages_path)
-
     examples = read_fact_examples(args.labels_path, fact_to_passage_dict)
-    #print("Read " + repr(len(examples)) + " examples")
-    #print("Fact and length of passages for each fact:")
-    #for example in examples:
-        #print(example.fact + ": " + repr([len(p["text"]) for p in example.passages]))
 
-    assert args.mode in ['random', 'always_entail', 'word_overlap', 'parsing', 'entailment'], "invalid method"
-    print(f"Method: {args.mode}")
+    thresholds = np.arange(0.01, 0.051, 0.001).tolist()
+    #thresholds = np.arange(0.00, 0.91, 0.05).tolist()
+    nlp = spacy.load("en_core_web_sm")
 
-    fact_checker = None
-    if args.mode == "random":
-        fact_checker = RandomGuessFactChecker()
-    elif args.mode == "always_entail":
-        fact_checker = AlwaysEntailedFactChecker()
-    elif args.mode == "word_overlap":
-        fact_checker = WordRecallThresholdFactChecker()
-    elif args.mode == "parsing":
-        fact_checker = DependencyRecallThresholdFactChecker()
-    elif args.mode == "entailment":
-        model_name = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
-        # model_name = "roberta-large-mnli"   # alternative model that you can try out if you want
-        ent_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        roberta_ent_model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        ent_model = EntailmentModel(roberta_ent_model, ent_tokenizer)
-        fact_checker = EntailmentFactChecker(ent_model)
-    else:
-        raise NotImplementedError
+    max_accuracy = 0
+    best_threshold = 0
 
-    predict_two_classes(examples, fact_checker)
+    for threshold in thresholds:
+        fact_checker = WordRecallThresholdFactChecker(classification_threshold=threshold, nlp=nlp)
+        accuracy = predict_two_classes(examples, fact_checker)
+
+        if accuracy > max_accuracy:
+            max_accuracy = accuracy
+            best_threshold = threshold
+
+    print(f'Best Accuracy: {max_accuracy} | Best Threshold: {best_threshold}')
