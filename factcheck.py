@@ -83,8 +83,8 @@ class AlwaysEntailedFactChecker(object):
 class WordRecallThresholdFactChecker(object):
     def __init__(self, classification_threshold=0.025, nlp=None):
         self.classification_threshold = classification_threshold
-        nltk.download('stopwords')
-        nltk.download('punkt_tab')
+        nltk.download('stopwords', quiet=True)
+        nltk.download('punkt_tab', quiet=True)
         self.stop_words = set(nltk.corpus.stopwords.words('english'))
         self.stemmer = nltk.stem.PorterStemmer()
 
@@ -134,6 +134,7 @@ class WordRecallThresholdFactChecker(object):
             return "S"
         else:
             return "NS"
+
 
 class EntailmentFactChecker(object):
     def __init__(self, ent_model):
