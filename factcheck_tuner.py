@@ -126,8 +126,8 @@ if __name__=="__main__":
     fact_to_passage_dict = read_passages(args.passages_path)
     examples = read_fact_examples(args.labels_path, fact_to_passage_dict)
 
-    thresholds = np.arange(0.02, 0.03, 0.0005).tolist()
-    #thresholds = np.arange(0.00, 0.91, 0.05).tolist()
+    thresholds = np.arange(0.04, 0.05, 0.0005).tolist()
+    #thresholds = np.arange(0.00, 0.50, 0.025).tolist()
     nlp = spacy.load("en_core_web_sm")
 
     max_accuracy = 0
@@ -135,7 +135,6 @@ if __name__=="__main__":
     accuracies = []
 
     for threshold in thresholds:
-        print(f'Threshold: {threshold}')
         fact_checker = WordRecallThresholdFactChecker(classification_threshold=threshold, nlp=nlp)
         accuracy = predict_two_classes(examples, fact_checker)
         accuracies.append(accuracy)
@@ -144,6 +143,10 @@ if __name__=="__main__":
             max_accuracy = accuracy
             best_threshold = threshold
 
+        print(f'Threshold: {threshold} | Accuracy: {accuracy}')
+
     print(f'Best Accuracy: {max_accuracy} | Best Threshold: {best_threshold}')
     plt.plot(thresholds, accuracies)
+    plt.ylabel('Accuracy')
+    plt.xlabel('Threshold')
     plt.show()
