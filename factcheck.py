@@ -81,11 +81,12 @@ class AlwaysEntailedFactChecker(object):
 
 
 class WordRecallThresholdFactChecker(object):
-    def __init__(self, classification_threshold=0.021, nlp=None):
+    def __init__(self, classification_threshold=0.025, nlp=None):
         self.classification_threshold = classification_threshold
         nltk.download('stopwords')
         nltk.download('punkt_tab')
         self.stop_words = set(nltk.corpus.stopwords.words('english'))
+        self.stemmer = nltk.stem.PorterStemmer()
 
         if nlp is None:
             self.nlp = spacy.load("en_core_web_sm")
@@ -102,7 +103,8 @@ class WordRecallThresholdFactChecker(object):
             if token.is_alpha is False:
                 continue
 
-            tokens.append(token.lemma_)
+            stemmed_token = self.stemmer.stem(token.lemma_)
+            tokens.append(stemmed_token)
 
         # Generate bigrams and add them to the list of tokens
         #tokens_with_bigrams = tokens + ["_".join(bigram) for bigram in nltk.bigrams(tokens)]

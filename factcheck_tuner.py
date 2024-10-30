@@ -126,7 +126,7 @@ if __name__=="__main__":
     fact_to_passage_dict = read_passages(args.passages_path)
     examples = read_fact_examples(args.labels_path, fact_to_passage_dict)
 
-    thresholds = np.arange(0.01, 0.051, 0.001).tolist()
+    thresholds = np.arange(0.02, 0.03, 0.0005).tolist()
     #thresholds = np.arange(0.00, 0.91, 0.05).tolist()
     nlp = spacy.load("en_core_web_sm")
 

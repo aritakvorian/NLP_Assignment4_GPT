@@ -83,6 +83,9 @@ def predict_two_classes(examples: List[FactExample], fact_checker):
         raw_pred = fact_checker.predict(example.fact, example.passages)
         pred_label = gold_label_indexer.index(raw_pred)
 
+        if gold_label != pred_label:
+            pass
+
         confusion_mat[gold_label][pred_label] += 1
         ex_count += 1
     print_eval_stats(confusion_mat, gold_label_indexer)
