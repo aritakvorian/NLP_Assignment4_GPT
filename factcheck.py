@@ -81,12 +81,17 @@ class AlwaysEntailedFactChecker(object):
 
 
 class WordRecallThresholdFactChecker(object):
-    def __init__(self, classification_threshold=0.025, nlp=None):
+    def __init__(self, classification_threshold=0.025, nlp=None, stop_words=None):
         self.classification_threshold = classification_threshold
         nltk.download('stopwords', quiet=True)
-        nltk.download('punkt_tab', quiet=True)
         self.stop_words = set(nltk.corpus.stopwords.words('english'))
         self.stemmer = nltk.stem.PorterStemmer()
+
+        if stop_words is None:
+            nltk.download('stopwords', quiet=True)
+            self.stop_words = set(nltk.corpus.stopwords.words('english'))
+        else:
+            self.stop_words = stop_words
 
         if nlp is None:
             self.nlp = spacy.load("en_core_web_sm")
@@ -106,7 +111,9 @@ class WordRecallThresholdFactChecker(object):
             stemmed_token = self.stemmer.stem(token.lemma_)
             tokens.append(stemmed_token)
 
-        # Generate bigrams and add them to the list of tokens
+            #tokens.append(token.lemma_)
+
+        # Bigrams
         #tokens_with_bigrams = tokens + ["_".join(bigram) for bigram in nltk.bigrams(tokens)]
         tokens_with_bigrams = tokens
 
@@ -120,6 +127,37 @@ class WordRecallThresholdFactChecker(object):
         else:
             return 0
 
+    def harmonic_jaccard(self, a, b):
+        overlap = a.intersection(b)
+        union = a.union(b)
+
+        # Harmonic mean of precision, recall, and jaccard
+        jaccard = len(overlap)/len(union)
+        precision = len(overlap) / len(b)
+        recall = len(overlap) / len(b)
+
+        if jaccard + precision + recall == 0:
+            return 0
+        else:
+            similarity = 3 * (precision * recall * jaccard) / (precision + recall + jaccard)
+            return similarity
+
+    def sentence_level_similarity(self, fact_tokens, passage):
+        sentences = nltk.sent_tokenize(passage)
+        max_similarity = 0
+        for sentence in sentences:
+            sentence_tokens = set(self.preprocessing(sentence))
+
+            # If fact fully in sentence
+            if fact_tokens.issubset(sentence_tokens):
+                return 1
+
+            similarity = self.jaccard_similarity(fact_tokens, sentence_tokens)
+            if similarity > max_similarity:
+                max_similarity = similarity
+
+        return max_similarity
+
     def predict(self, fact: str, passages: List[dict]) -> str:
         input_tokens = set(self.preprocessing(fact))
         max_similarity = 0
@@ -127,6 +165,7 @@ class WordRecallThresholdFactChecker(object):
         for passage in passages:
             text_tokens = set(self.preprocessing(passage["text"]))
             similarity = self.jaccard_similarity(input_tokens, text_tokens)
+            #similarity = self.sentence_level_similarity(input_tokens, passage["text"])
             if similarity > max_similarity:
                 max_similarity = similarity
 

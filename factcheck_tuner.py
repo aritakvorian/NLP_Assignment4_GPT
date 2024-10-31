@@ -127,15 +127,20 @@ if __name__=="__main__":
     examples = read_fact_examples(args.labels_path, fact_to_passage_dict)
 
     thresholds = np.arange(0.04, 0.05, 0.0005).tolist()
-    #thresholds = np.arange(0.00, 0.50, 0.025).tolist()
+    thresholds = np.arange(0.00, 0.50, 0.025).tolist()
+    thresholds = np.arange(0.00, 0.91, 0.05).tolist()
+
     nlp = spacy.load("en_core_web_sm")
+
+    nltk.download('stopwords', quiet=True)
+    stop_words = set(nltk.corpus.stopwords.words('english'))
 
     max_accuracy = 0
     best_threshold = 0
     accuracies = []
 
     for threshold in thresholds:
-        fact_checker = WordRecallThresholdFactChecker(classification_threshold=threshold, nlp=nlp)
+        fact_checker = WordRecallThresholdFactChecker(classification_threshold=threshold, nlp=nlp, stop_words=stop_words)
         accuracy = predict_two_classes(examples, fact_checker)
         accuracies.append(accuracy)
 
