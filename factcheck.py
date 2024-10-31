@@ -44,7 +44,15 @@ class EntailmentModel:
         # Note that the labels are ["entailment", "neutral", "contradiction"]. There are a number of ways to map
         # these logits or probabilities to classification decisions; you'll have to decide how you want to do this.
 
-        raise Exception("Not implemented")
+        probabilities = torch.nn.functional.softmax(logits, dim=-1).squeeze()
+        entailment_prob = probabilities[0]
+        neutral_prob = probabilities[1]
+        contra_prob = probabilities[2]
+
+        if entailment_prob > max(neutral_prob, contra_prob):
+            prediction = "S"
+        else:
+            prediction = "NS"
 
         # To prevent out-of-memory (OOM) issues during autograding, we explicitly delete
         # objects inputs, outputs, logits, and any results that are no longer needed after the computation.
@@ -52,7 +60,7 @@ class EntailmentModel:
         gc.collect()
 
         # return something
-
+        return prediction
 
 class FactChecker(object):
     """
@@ -180,7 +188,17 @@ class EntailmentFactChecker(object):
         self.ent_model = ent_model
 
     def predict(self, fact: str, passages: List[dict]) -> str:
-        raise Exception("Implement me")
+
+        for passage in passages:
+            sentences = passage["text"].split(". ")
+
+            for sentence in sentences:
+                if sentence:
+                    result = self.ent_model.check_entailment(sentence, fact)
+                    if result == "S":
+                        return result
+
+        return "NS"
 
 
 # OPTIONAL
